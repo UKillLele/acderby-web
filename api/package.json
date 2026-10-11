@@ -2,7 +2,7 @@
   "name": "acderby-api",
   "private": true,
   "version": "0.1.0",
-  "main": "dist/src/functions/*.js",
+  "main": "dist/functions/*.js",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.build.json",
