@@ -1,0 +1,5 @@
+*.ts
+*.test.ts
+tsconfig*.json
+node_modules/
+local.settings.json
