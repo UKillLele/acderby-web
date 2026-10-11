@@ -6,6 +6,8 @@ import { PeopleAdminPage } from '../pages/admin/PeopleAdminPage';
 import { PersonFormPage } from '../pages/admin/PersonFormPage';
 import { RequireRole } from '../auth/RequireRole';
 import { UsersAdminPage } from '../pages/admin/UsersAdminPage';
+import { TeamFormPage } from '../pages/admin/TeamFormPage';
+import { TeamsAdminPage } from '../pages/admin/TeamsAdminPage';
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -15,6 +17,9 @@ export const router = createBrowserRouter(
         <Route path="people" element={<PeopleAdminPage />} />
         <Route path="people/new" element={<PersonFormPage />} />
         <Route path="people/:id" element={<PersonFormPage />} />
+        <Route path="teams" element={<TeamsAdminPage />} />
+        <Route path="teams/new" element={<TeamFormPage />} />
+        <Route path="teams/:slug" element={<TeamFormPage />} />
         <Route element={<RequireRole allowed={['admin']} />}>
           <Route path="users" element={<UsersAdminPage />} />
         </Route>

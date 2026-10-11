@@ -1,5 +1,6 @@
-import type { Person, PersonInput, TeamSummary } from '../models/person';
+import type { Person, PersonInput } from '../models/person';
 import type { AppUser, NewUser, RoleChange } from '../models/user';
+import type { Team, TeamInput } from '../models/team';
 
 // Error from the API. `details` holds the validation messages when the request was refused with 400.
 export class ApiError extends Error {
@@ -45,7 +46,11 @@ export const peopleApi = {
 };
 
 export const teamsApi = {
-  list: () => request<TeamSummary[]>('/teams'),
+  list: () => request<Team[]>('/teams'),
+  get: (slug: string) => request<Team>(`/teams/${encodeURIComponent(slug)}`),
+  create: (input: TeamInput) => request<Team>('/teams', { method: 'POST', ...json(input) }),
+  update: (slug: string, input: TeamInput) =>
+    request<Team>(`/teams/${encodeURIComponent(slug)}`, { method: 'PUT', ...json(input) }),
 };
 
 const userPath = (identityProvider: string, userId: string) =>

@@ -13,7 +13,20 @@ vi.mock('../../api/client', async (importOriginal) => {
   };
 });
 
-const photographers = { id: 'team-photo', slug: 'photographers', name: 'Photographers' };
+const photographers = {
+  id: 'team-photo',
+  slug: 'photographers',
+  name: 'Photographers',
+  description: '',
+  imageUrl: '',
+  logoUrl: '',
+  color: '#000000',
+  seasonWins: 0,
+  seasonLosses: 0,
+  ranking: 0,
+  defaultSkaterImage: '',
+  type: 'Misc',
+};
 
 function renderNewPerson() {
   return render(
