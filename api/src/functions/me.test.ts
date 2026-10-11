@@ -24,7 +24,7 @@ describe('GET /api/me', () => {
   it('returns the stored role for the signed-in user', async () => {
     const { handler, roles } = setup('admin');
     const res = await handler(fakeRequest({ headers: { [CLIENT_PRINCIPAL_HEADER]: encodePrincipal(github) } }));
-    expect(res.jsonBody).toEqual({ userDetails: 'admin', identityProvider: 'github', role: 'admin' });
+    expect(res.jsonBody).toEqual({ userDetails: 'admin', identityProvider: 'github', userId: '29181325', role: 'admin' });
     expect(roles.getRole).toHaveBeenCalledWith('github', '29181325');
   });
 

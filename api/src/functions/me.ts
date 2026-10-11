@@ -21,6 +21,7 @@ export function meHandler(deps: () => MeDeps) {
     return json(200, {
       userDetails: principal.userDetails,
       identityProvider: principal.identityProvider,
+      userId: principal.userId,
       role,
     });
   };
