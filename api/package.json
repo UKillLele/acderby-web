@@ -2,13 +2,14 @@
   "name": "acderby-api",
   "private": true,
   "version": "0.1.0",
-  "main": "dist/src/functions/*.js",
+  "main": "dist/functions/*.js",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "start": "npm run build && func start"
   },
   "dependencies": {
+    "@azure/cosmos": "4.10.1",
     "@azure/functions": "4.16.5"
   },
   "devDependencies": {
