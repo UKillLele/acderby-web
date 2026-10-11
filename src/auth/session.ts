@@ -1,18 +1,19 @@
-// Client-side identity lookup for UI only (show/hide admin links).
-// Every write is enforced on the server by api/src/shared/guard.ts.
-export interface ClientPrincipal {
-  identityProvider: string;
-  userId: string;
+// Who the signed-in user is and what app role they hold, for UI only.
+// Every write is enforced on the server by requireRequestRole in the API.
+export type AppRole = 'admin' | 'editor';
+
+export interface CurrentUser {
   userDetails: string;
-  userRoles: string[];
+  identityProvider: string;
+  role: AppRole | null;
 }
 
-export async function fetchPrincipal(): Promise<ClientPrincipal | null> {
+// Resolves to null when nobody is signed in or the lookup fails.
+export async function fetchCurrentUser(): Promise<CurrentUser | null> {
   try {
-    const response = await fetch('/.auth/me');
+    const response = await fetch('/api/me');
     if (!response.ok) return null;
-    const body = (await response.json()) as { clientPrincipal: ClientPrincipal | null };
-    return body.clientPrincipal;
+    return (await response.json()) as CurrentUser;
   } catch {
     return null;
   }
