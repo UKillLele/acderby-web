@@ -8,15 +8,16 @@ import { ApiRequest, errorResponse, isCosmosError, json, readJsonBody, stripSyst
 import { parsePersonInput, Person } from '../shared/models';
 import { CosmosRoleStore } from '../shared/roleStore';
 
-export interface PlayersDeps {
+export interface PeopleDeps {
   roles: RoleStore;
   players: Container;
 }
 
 const MAX_TEAM_ID_LENGTH = 64;
 
-// Players are partitioned by id, so the id is passed as both the item id and the partition key.
-export function playersHandlers(deps: () => PlayersDeps) {
+// People (players and photographers) are partitioned by id. The container keeps its legacy name, `players`,
+// because the legacy site still uses it. The id is passed as both the item id and the partition key.
+export function peopleHandlers(deps: () => PeopleDeps) {
   // Returns a response to send when the caller may not write, or null when they may.
   async function denyUnlessWriter(request: ApiRequest): Promise<HttpResponseInit | null> {
     const result = await requireRequestRole(request, WRITE_ROLES, deps().roles);
@@ -43,7 +44,7 @@ export function playersHandlers(deps: () => PlayersDeps) {
     get: async (request: ApiRequest): Promise<HttpResponseInit> => {
       const id = request.params.id ?? '';
       const { resource } = await deps().players.item(id, id).read<Person>();
-      return resource ? json(200, stripSystemFields(resource)) : errorResponse(404, 'Player not found');
+      return resource ? json(200, stripSystemFields(resource)) : errorResponse(404, 'Person not found');
     },
 
     create: async (request: ApiRequest): Promise<HttpResponseInit> => {
@@ -51,9 +52,14 @@ export function playersHandlers(deps: () => PlayersDeps) {
       if (denied) return denied;
 
       const parsed = parsePersonInput(await readJsonBody(request));
-      if (!parsed.ok) return errorResponse(400, 'Invalid player', parsed.errors);
+      if (!parsed.ok) return errorResponse(400, 'Invalid person', parsed.errors);
 
-      const doc: Person = { id: randomUUID(), ...parsed.value, imageUrl: parsed.value.imageUrl ?? '' };
+      const doc: Person = {
+        id: randomUUID(),
+        ...parsed.value,
+        imageUrl: parsed.value.imageUrl ?? '',
+        portfolioUrl: parsed.value.portfolioUrl ?? '',
+      };
       await deps().players.items.create(doc);
       return json(201, doc);
     },
@@ -64,19 +70,24 @@ export function playersHandlers(deps: () => PlayersDeps) {
 
       const id = request.params.id ?? '';
       const parsed = parsePersonInput(await readJsonBody(request));
-      if (!parsed.ok) return errorResponse(400, 'Invalid player', parsed.errors);
+      if (!parsed.ok) return errorResponse(400, 'Invalid person', parsed.errors);
 
       // The id comes from the route only. A different id in the body is ignored.
       // An omitted imageUrl keeps the stored photo; an empty string clears it.
       const { resource } = await deps().players.item(id, id).read<Person>();
-      if (!resource) return errorResponse(404, 'Player not found');
+      if (!resource) return errorResponse(404, 'Person not found');
       const existing = stripSystemFields(resource);
 
-      const doc: Person = { id, ...parsed.value, imageUrl: parsed.value.imageUrl ?? existing.imageUrl };
+      const doc: Person = {
+        id,
+        ...parsed.value,
+        imageUrl: parsed.value.imageUrl ?? existing.imageUrl,
+        portfolioUrl: parsed.value.portfolioUrl ?? existing.portfolioUrl ?? '',
+      };
       try {
         await deps().players.item(id, id).replace(doc);
       } catch (err) {
-        if (isCosmosError(err, 404)) return errorResponse(404, 'Player not found');
+        if (isCosmosError(err, 404)) return errorResponse(404, 'Person not found');
         throw err;
       }
       return json(200, doc);
@@ -90,7 +101,7 @@ export function playersHandlers(deps: () => PlayersDeps) {
       try {
         await deps().players.item(id, id).delete();
       } catch (err) {
-        if (isCosmosError(err, 404)) return errorResponse(404, 'Player not found');
+        if (isCosmosError(err, 404)) return errorResponse(404, 'Person not found');
         throw err;
       }
       return json(204);
@@ -99,42 +110,42 @@ export function playersHandlers(deps: () => PlayersDeps) {
 }
 
 // The live dependencies. Read per request so importing this module does not need Cosmos configured.
-const handlers = playersHandlers(() => ({
+const handlers = peopleHandlers(() => ({
   roles: new CosmosRoleStore(getContainer('users')),
   players: getContainer('players'),
 }));
 
-app.http('listPlayers', {
+app.http('listPeople', {
   methods: ['GET'],
   authLevel: 'anonymous',
-  route: 'players',
+  route: 'people',
   handler: handlers.list,
 });
 
-app.http('getPlayer', {
+app.http('getPerson', {
   methods: ['GET'],
   authLevel: 'anonymous',
-  route: 'players/{id}',
+  route: 'people/{id}',
   handler: handlers.get,
 });
 
-app.http('createPlayer', {
+app.http('createPerson', {
   methods: ['POST'],
   authLevel: 'anonymous',
-  route: 'players',
+  route: 'people',
   handler: handlers.create,
 });
 
-app.http('updatePlayer', {
+app.http('updatePerson', {
   methods: ['PUT'],
   authLevel: 'anonymous',
-  route: 'players/{id}',
+  route: 'people/{id}',
   handler: handlers.update,
 });
 
-app.http('deletePlayer', {
+app.http('deletePerson', {
   methods: ['DELETE'],
   authLevel: 'anonymous',
-  route: 'players/{id}',
+  route: 'people/{id}',
   handler: handlers.remove,
 });

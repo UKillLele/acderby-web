@@ -20,6 +20,8 @@ export interface Person {
   name: string;
   number: string;
   imageUrl: string;
+  // Photographers link to their portfolio here. Players leave it empty.
+  portfolioUrl: string;
   teams: Position[];
 }
 
@@ -40,7 +42,10 @@ export interface Team {
 }
 
 // Image fields are optional on input. Omitted means "keep the stored value" on update; an empty string clears it.
-export type PersonInput = Omit<Person, 'id' | 'imageUrl'> & { imageUrl?: string };
+export type PersonInput = Omit<Person, 'id' | 'imageUrl' | 'portfolioUrl'> & {
+  imageUrl?: string;
+  portfolioUrl?: string;
+};
 export type TeamInput = Omit<Team, 'id' | 'slug' | 'imageUrl' | 'logoUrl' | 'defaultSkaterImage'> & {
   imageUrl?: string;
   logoUrl?: string;
@@ -124,6 +129,7 @@ export function parsePersonInput(body: unknown): ParseResult<PersonInput> {
     name: readRequiredString(body, 'name', 100, errors),
     number: readString(body, 'number', 10, errors),
     imageUrl: readHttpsUrl(body, 'imageUrl', errors),
+    portfolioUrl: readHttpsUrl(body, 'portfolioUrl', errors),
     teams: readPositions(body, errors),
   };
   return errors.length ? { ok: false, errors } : { ok: true, value };

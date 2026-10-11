@@ -5,7 +5,7 @@ import { RoleStore } from '../shared/guard';
 import { AppRole, ClientPrincipal } from '../shared/principal';
 import { Person, PositionType } from '../shared/models';
 import { asContainer, encodePrincipal, fakeRequest, InMemoryContainer } from '../shared/testDoubles';
-import { playersHandlers } from './players';
+import { peopleHandlers } from './people';
 
 const github: ClientPrincipal = {
   identityProvider: 'github',
@@ -21,9 +21,10 @@ const alex: Person = {
   name: 'Alex',
   number: '12',
   imageUrl: '',
+  portfolioUrl: '',
   teams: [{ id: TEAM_ID, positionType: PositionType.member }],
 };
-const sam: Person = { id: 'p2', name: 'Sam', number: '7', imageUrl: '', teams: [] };
+const sam: Person = { id: 'p2', name: 'Sam', number: '7', imageUrl: '', portfolioUrl: '', teams: [] };
 
 // Mirrors the team filter the real SQL query does.
 const filterByTeam = (docs: Person[], spec: { parameters?: { name: string; value: unknown }[] }) => {
@@ -34,7 +35,7 @@ const filterByTeam = (docs: Person[], spec: { parameters?: { name: string; value
 function setup(role: AppRole | null = 'editor') {
   const players = new InMemoryContainer<Person>((p) => p.id, [alex, sam], filterByTeam);
   const roles: RoleStore = { getRole: vi.fn(async () => role) };
-  const handlers = playersHandlers(() => ({ roles, players: asContainer(players) }));
+  const handlers = peopleHandlers(() => ({ roles, players: asContainer(players) }));
   return { handlers, players, roles };
 }
 
@@ -43,7 +44,7 @@ const validBody = { name: 'Jordan', number: '3', imageUrl: '', teams: [{ id: TEA
 describe('players read endpoints', () => {
   it('removes Cosmos system fields from list and get responses', async () => {
     const { handlers, players } = setup();
-    players.docs.set('p10000p1', { ...alex, _rid: 'r', _self: 's', _etag: 'e', _ts: 1 } as Person);
+    players.docs.set('p1\u0000p1', { ...alex, _rid: 'r', _self: 's', _etag: 'e', _ts: 1 } as Person);
     const list = await handlers.list(fakeRequest());
     const one = await handlers.get(fakeRequest({ params: { id: 'p1' } }));
     expect(list.jsonBody).toEqual(expect.arrayContaining([alex]));
@@ -110,7 +111,7 @@ describe('players write endpoints', () => {
     );
     expect(res.status).toBe(400);
     expect(res.jsonBody).toEqual({
-      error: 'Invalid player',
+      error: 'Invalid person',
       details: ['name is required', 'teams[0].positionType must be a valid position'],
     });
     expect(players.docs.size).toBe(2);
@@ -131,7 +132,7 @@ describe('players write endpoints', () => {
       fakeRequest({ body: { ...validBody, id: 'other' }, headers: signedIn, params: { id: 'p1' } }),
     );
     expect(res.status).toBe(200);
-    expect(players.docs.get('p1\u0000p1')).toEqual({ id: 'p1', ...validBody });
+    expect(players.docs.get('p1\u0000p1')).toEqual({ id: 'p1', portfolioUrl: '', ...validBody });
     expect(players.docs.has('other\u0000other')).toBe(false);
   });
 
@@ -145,6 +146,17 @@ describe('players write endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(players.docs.get('p1\u0000p1')?.imageUrl).toBe(photo);
+  });
+
+  it('update keeps a stored portfolio link when the body leaves portfolioUrl out', async () => {
+    const portfolio = 'https://example.com/jordan';
+    const { handlers, players } = setup('editor');
+    players.docs.set('p1\u0000p1', { ...alex, portfolioUrl: portfolio });
+    const withoutPortfolio = { name: validBody.name, number: validBody.number, teams: validBody.teams };
+
+    await handlers.update(fakeRequest({ body: withoutPortfolio, headers: signedIn, params: { id: 'p1' } }));
+
+    expect(players.docs.get('p1\u0000p1')?.portfolioUrl).toBe(portfolio);
   });
 
   it('update clears the photo when the body sends an empty imageUrl', async () => {

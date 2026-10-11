@@ -20,6 +20,11 @@ describe('parsePersonInput', () => {
     expect(result.ok && result.value.imageUrl).toBe('');
   });
 
+  it('refuses a portfolio link that is not https', () => {
+    const result = parsePersonInput({ name: 'Jordan', portfolioUrl: 'http://example.com' });
+    expect(result).toEqual({ ok: false, errors: ['portfolioUrl must be an https URL'] });
+  });
+
   it('refuses an image that is not https', () => {
     const result = parsePersonInput({ name: 'Alex', imageUrl: 'javascript:alert(1)' });
     expect(result).toEqual({ ok: false, errors: ['imageUrl must be an https URL'] });
