@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Alert, Badge, Button, Spinner, Table } from 'react-bootstrap';
 import { Link } from 'react-router';
-import { ApiError, peopleApi } from '../../api/client';
-import type { Person } from '../../models/person';
+import { ApiError, peopleApi, teamsApi } from '../../api/client';
+import type { Person, TeamSummary } from '../../models/person';
 
 export function PeopleAdminPage() {
   const [people, setPeople] = useState<Person[] | null>(null);
+  const [teams, setTeams] = useState<TeamSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    peopleApi
-      .list()
-      .then((list) => {
-        if (active) setPeople(list);
+    Promise.all([peopleApi.list(), teamsApi.list()])
+      .then(([list, teamList]) => {
+        if (!active) return;
+        setPeople(list);
+        setTeams(teamList);
       })
       .catch((err: unknown) => {
         if (active) setError(messageFor(err));
@@ -53,7 +55,6 @@ export function PeopleAdminPage() {
             <tr>
               <th scope="col">Name</th>
               <th scope="col">Number</th>
-              <th scope="col">Roles</th>
               <th scope="col">Teams</th>
               <th scope="col">
                 <span className="visually-hidden">Actions</span>
@@ -66,13 +67,12 @@ export function PeopleAdminPage() {
                 <td>{person.name}</td>
                 <td>{person.number}</td>
                 <td>
-                  {person.roles.map((role) => (
-                    <Badge key={role} bg={role === 'photographer' ? 'info' : 'secondary'} className="me-1">
-                      {role}
+                  {person.teams.map((position) => (
+                    <Badge key={position.id} bg="secondary" className="me-1">
+                      {teamName(teams, position.id)}
                     </Badge>
                   ))}
                 </td>
-                <td>{person.teams.length}</td>
                 <td className="text-end text-nowrap">
                   <Link to={`/admin/people/${person.id}`} className="btn btn-sm btn-outline-primary me-2">
                     Edit
@@ -88,6 +88,11 @@ export function PeopleAdminPage() {
       )}
     </section>
   );
+}
+
+// Falls back to the id if the team list has not loaded or the team was removed.
+function teamName(teams: TeamSummary[], teamId: string): string {
+  return teams.find((team) => team.id === teamId)?.name ?? teamId;
 }
 
 // Shows the API's validation details when there are some, otherwise the error message.

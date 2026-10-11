@@ -9,10 +9,6 @@ export enum PositionType {
   headCoach = 4,
 }
 
-// A person can be a player, a photographer, or both.
-export const PERSON_ROLES = ['player', 'photographer'] as const;
-export type PersonRole = (typeof PERSON_ROLES)[number];
-
 export interface Position {
   id: string;
   positionType: PositionType;
@@ -26,7 +22,6 @@ export interface Person {
   imageUrl: string;
   // Photographers link to their portfolio here. Players leave it empty.
   portfolioUrl: string;
-  roles: PersonRole[];
   teams: Position[];
 }
 
@@ -47,10 +42,9 @@ export interface Team {
 }
 
 // Image fields are optional on input. Omitted means "keep the stored value" on update; an empty string clears it.
-export type PersonInput = Omit<Person, 'id' | 'imageUrl' | 'portfolioUrl' | 'roles'> & {
+export type PersonInput = Omit<Person, 'id' | 'imageUrl' | 'portfolioUrl'> & {
   imageUrl?: string;
   portfolioUrl?: string;
-  roles?: PersonRole[];
 };
 export type TeamInput = Omit<Team, 'id' | 'slug' | 'imageUrl' | 'logoUrl' | 'defaultSkaterImage'> & {
   imageUrl?: string;
@@ -95,19 +89,6 @@ function readHttpsUrl(body: Record<string, unknown>, field: string, errors: stri
   return value;
 }
 
-// Left out means keep the stored roles on update, or player on create. Otherwise one or two known roles.
-function readRoles(body: Record<string, unknown>, errors: string[]): PersonRole[] | undefined {
-  const raw = body.roles;
-  if (raw === undefined || raw === null) return undefined;
-  const invalid = !Array.isArray(raw) || raw.some((role) => !PERSON_ROLES.includes(role as PersonRole));
-  const unique = Array.isArray(raw) ? [...new Set(raw as PersonRole[])] : [];
-  if (invalid || unique.length < 1) {
-    errors.push('roles must list one or more of: ' + PERSON_ROLES.join(', '));
-    return undefined;
-  }
-  return unique;
-}
-
 function readCount(body: Record<string, unknown>, field: string, errors: string[]): number {
   const raw = body[field];
   if (raw === undefined || raw === null) return 0;
@@ -149,7 +130,6 @@ export function parsePersonInput(body: unknown): ParseResult<PersonInput> {
     number: readString(body, 'number', 10, errors),
     imageUrl: readHttpsUrl(body, 'imageUrl', errors),
     portfolioUrl: readHttpsUrl(body, 'portfolioUrl', errors),
-    roles: readRoles(body, errors),
     teams: readPositions(body, errors),
   };
   return errors.length ? { ok: false, errors } : { ok: true, value };

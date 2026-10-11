@@ -8,10 +8,10 @@ import { ApiRequest, errorResponse, isCosmosError, json, readJsonBody, stripSyst
 import { parsePersonInput, Person } from '../shared/models';
 import { CosmosRoleStore } from '../shared/roleStore';
 
-// Records saved before roles existed are players. Reads fill in the defaults so every response has the same shape.
+// Records saved before portfolioUrl existed read back with an empty one, so every response has the same shape.
 function toPerson(doc: Person): Person {
   const clean = stripSystemFields(doc);
-  return { ...clean, portfolioUrl: clean.portfolioUrl ?? '', roles: clean.roles ?? ['player'] };
+  return { ...clean, portfolioUrl: clean.portfolioUrl ?? '' };
 }
 
 export interface PeopleDeps {
@@ -65,7 +65,6 @@ export function peopleHandlers(deps: () => PeopleDeps) {
         ...parsed.value,
         imageUrl: parsed.value.imageUrl ?? '',
         portfolioUrl: parsed.value.portfolioUrl ?? '',
-        roles: parsed.value.roles ?? ['player'],
       };
       await deps().players.items.create(doc);
       return json(201, doc);
@@ -90,7 +89,6 @@ export function peopleHandlers(deps: () => PeopleDeps) {
         ...parsed.value,
         imageUrl: parsed.value.imageUrl ?? existing.imageUrl,
         portfolioUrl: parsed.value.portfolioUrl ?? existing.portfolioUrl,
-        roles: parsed.value.roles ?? existing.roles,
       };
       try {
         await deps().players.item(id, id).replace(doc);

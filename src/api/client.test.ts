@@ -19,19 +19,19 @@ describe('peopleApi', () => {
   it('throws an ApiError carrying the validation details from the server', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ error: 'Invalid person', details: ['name is required'] }, 400));
 
-    await expect(peopleApi.create({ name: '', number: '', imageUrl: '', portfolioUrl: '', roles: ['player'], teams: [] }))
+    await expect(peopleApi.create({ name: '', number: '', imageUrl: '', portfolioUrl: '', teams: [] }))
       .rejects.toMatchObject({ status: 400, message: 'Invalid person', details: ['name is required'] });
   });
 
   it('sends a PUT with a JSON body to the person route', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ id: 'p1' }));
 
-    await peopleApi.update('p1', { name: 'Alex', number: '1', imageUrl: '', portfolioUrl: '', roles: ['player'], teams: [] });
+    await peopleApi.update('p1', { name: 'Alex', number: '1', imageUrl: '', portfolioUrl: '', teams: [] });
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/api/people/p1');
     expect(init.method).toBe('PUT');
-    expect(JSON.parse(init.body as string)).toMatchObject({ name: 'Alex', roles: ['player'] });
+    expect(JSON.parse(init.body as string)).toMatchObject({ name: 'Alex' });
   });
 
   it('resolves with nothing for a 204 delete', async () => {

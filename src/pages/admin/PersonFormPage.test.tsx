@@ -13,6 +13,8 @@ vi.mock('../../api/client', async (importOriginal) => {
   };
 });
 
+const photographers = { id: 'team-photo', slug: 'photographers', name: 'Photographers' };
+
 function renderNewPerson() {
   return render(
     <MemoryRouter initialEntries={['/admin/people/new']}>
@@ -31,7 +33,7 @@ describe('PersonFormPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(teamsApi.list).mockResolvedValue([]);
+    vi.mocked(teamsApi.list).mockResolvedValue([photographers]);
   });
 
   it('requires a name and does not save', async () => {
@@ -41,38 +43,28 @@ describe('PersonFormPage', () => {
     expect(peopleApi.create).not.toHaveBeenCalled();
   });
 
-  it('requires at least one role', async () => {
-    renderNewPerson();
-    fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Jordan' } });
-    fireEvent.click(screen.getByLabelText('Player'));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(await screen.findByText(/Choose at least one role/)).toBeTruthy();
-    expect(peopleApi.create).not.toHaveBeenCalled();
-  });
-
-  it('saves a photographer with a portfolio link and goes back to the list', async () => {
+  it('saves a photographer as a member of the Photographers team, with a portfolio link', async () => {
     vi.mocked(peopleApi.create).mockResolvedValue({
       id: 'new',
       name: 'Riley',
       number: '',
       imageUrl: '',
       portfolioUrl: 'https://example.com/riley',
-      roles: ['photographer'],
-      teams: [],
+      teams: [{ id: 'team-photo', positionType: 0 }],
     });
     renderNewPerson();
 
     fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Riley' } });
-    fireEvent.click(screen.getByLabelText('Player'));
-    fireEvent.click(screen.getByLabelText('Photographer'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add team position' }));
+    fireEvent.change(screen.getByLabelText('Team'), { target: { value: 'team-photo' } });
     fireEvent.change(screen.getByLabelText('Portfolio link'), { target: { value: 'https://example.com/riley' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(peopleApi.create).toHaveBeenCalledTimes(1));
     expect(vi.mocked(peopleApi.create).mock.calls[0][0]).toMatchObject({
       name: 'Riley',
-      roles: ['photographer'],
       portfolioUrl: 'https://example.com/riley',
+      teams: [{ id: 'team-photo', positionType: 0 }],
     });
     expect(await screen.findByText('People list')).toBeTruthy();
   });

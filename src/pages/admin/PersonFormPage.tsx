@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Alert, Button, Col, Form, Row, Spinner } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router';
 import { peopleApi, teamsApi } from '../../api/client';
-import { PERSON_ROLES, PersonInput, PersonRole, POSITION_LABELS, PositionType, TeamSummary } from '../../models/person';
+import { PersonInput, POSITION_LABELS, PositionType, TeamSummary } from '../../models/person';
 import { messageFor } from './PeopleAdminPage';
 
 interface TeamRow {
@@ -15,11 +15,10 @@ interface FormState {
   number: string;
   imageUrl: string;
   portfolioUrl: string;
-  roles: PersonRole[];
   teams: TeamRow[];
 }
 
-const EMPTY: FormState = { name: '', number: '', imageUrl: '', portfolioUrl: '', roles: ['player'], teams: [] };
+const EMPTY: FormState = { name: '', number: '', imageUrl: '', portfolioUrl: '', teams: [] };
 
 export function PersonFormPage() {
   const { id } = useParams();
@@ -45,7 +44,6 @@ export function PersonFormPage() {
             number: person.number,
             imageUrl: person.imageUrl,
             portfolioUrl: person.portfolioUrl,
-            roles: person.roles,
             teams: person.teams.map((t) => ({ teamId: t.id, positionType: t.positionType })),
           });
         }
@@ -60,14 +58,6 @@ export function PersonFormPage() {
       active = false;
     };
   }, [editing, id]);
-
-  function toggleRole(role: PersonRole) {
-    setForm((current) => {
-      const has = current.roles.includes(role);
-      const roles = has ? current.roles.filter((r) => r !== role) : [...current.roles, role];
-      return { ...current, roles };
-    });
-  }
 
   function updateTeamRow(index: number, patch: Partial<TeamRow>) {
     setForm((current) => ({
@@ -84,17 +74,12 @@ export function PersonFormPage() {
       setError('Name is required.');
       return;
     }
-    if (form.roles.length === 0) {
-      setError('Choose at least one role: player or photographer.');
-      return;
-    }
 
     const input: PersonInput = {
       name: form.name.trim(),
       number: form.number.trim(),
       imageUrl: form.imageUrl.trim(),
       portfolioUrl: form.portfolioUrl.trim(),
-      roles: form.roles,
       teams: form.teams.filter((row) => row.teamId).map((row) => ({ id: row.teamId, positionType: row.positionType })),
     };
 
@@ -132,22 +117,6 @@ export function PersonFormPage() {
             </Form.Group>
           </Col>
 
-          <Col xs={12}>
-            <Form.Label>Roles</Form.Label>
-            <div>
-              {PERSON_ROLES.map((role) => (
-                <Form.Check
-                  inline
-                  key={role}
-                  id={`role-${role}`}
-                  label={role === 'player' ? 'Player' : 'Photographer'}
-                  checked={form.roles.includes(role)}
-                  onChange={() => toggleRole(role)}
-                />
-              ))}
-            </div>
-          </Col>
-
           <Col md={6}>
             <Form.Group controlId="person-portfolio">
               <Form.Label>Portfolio link</Form.Label>
@@ -175,6 +144,7 @@ export function PersonFormPage() {
 
           <Col xs={12}>
             <h2 className="h5">Team positions</h2>
+            <Form.Text className="d-block mb-2">Photographers are members of the Photographers team.</Form.Text>
             {form.teams.map((row, index) => (
               <Row key={index} className="g-2 mb-2 align-items-center">
                 <Col sm={6}>

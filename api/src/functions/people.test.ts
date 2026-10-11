@@ -22,10 +22,9 @@ const alex: Person = {
   number: '12',
   imageUrl: '',
   portfolioUrl: '',
-  roles: ['player'],
   teams: [{ id: TEAM_ID, positionType: PositionType.member }],
 };
-const sam: Person = { id: 'p2', name: 'Sam', number: '7', imageUrl: '', portfolioUrl: '', roles: ['player'], teams: [] };
+const sam: Person = { id: 'p2', name: 'Sam', number: '7', imageUrl: '', portfolioUrl: '', teams: [] };
 
 // Mirrors the team filter the real SQL query does.
 const filterByTeam = (docs: Person[], spec: { parameters?: { name: string; value: unknown }[] }) => {
@@ -133,7 +132,7 @@ describe('players write endpoints', () => {
       fakeRequest({ body: { ...validBody, id: 'other' }, headers: signedIn, params: { id: 'p1' } }),
     );
     expect(res.status).toBe(200);
-    expect(players.docs.get('p1\u0000p1')).toEqual({ id: 'p1', portfolioUrl: '', roles: ['player'], ...validBody });
+    expect(players.docs.get('p1\u0000p1')).toEqual({ id: 'p1', portfolioUrl: '', ...validBody });
     expect(players.docs.has('other\u0000other')).toBe(false);
   });
 
@@ -170,32 +169,12 @@ describe('players write endpoints', () => {
     expect(players.docs.get('p1\u0000p1')?.imageUrl).toBe('');
   });
 
-  it('create defaults to the player role and accepts photographers', async () => {
-    const { handlers } = setup('editor');
-    const player = await handlers.create(fakeRequest({ body: validBody, headers: signedIn }));
-    const photographer = await handlers.create(
-      fakeRequest({
-        body: { name: 'Riley', roles: ['photographer'], portfolioUrl: 'https://example.com/riley' },
-        headers: signedIn,
-      }),
-    );
-    expect((player.jsonBody as Person).roles).toEqual(['player']);
-    expect((photographer.jsonBody as Person).roles).toEqual(['photographer']);
-  });
-
-  it('update keeps the stored roles when the body leaves them out', async () => {
-    const { handlers, players } = setup('editor');
-    players.docs.set('p1\u0000p1', { ...alex, roles: ['photographer'] });
-    await handlers.update(fakeRequest({ body: validBody, headers: signedIn, params: { id: 'p1' } }));
-    expect(players.docs.get('p1\u0000p1')?.roles).toEqual(['photographer']);
-  });
-
-  it('reads records saved before roles existed as players', async () => {
+  it('reads records saved before portfolioUrl existed as empty', async () => {
     const { handlers, players } = setup();
     const legacy = { id: 'old', name: 'Legacy', number: '9', imageUrl: '', teams: [] } as unknown as Person;
     players.docs.set('old\u0000old', legacy);
     const res = await handlers.get(fakeRequest({ params: { id: 'old' } }));
-    expect(res.jsonBody).toMatchObject({ roles: ['player'], portfolioUrl: '' });
+    expect(res.jsonBody).toMatchObject({ portfolioUrl: '' });
   });
 
   it('update returns 404 for a missing player', async () => {
