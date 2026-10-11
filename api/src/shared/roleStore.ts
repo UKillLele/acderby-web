@@ -3,8 +3,8 @@ import { AppRole } from './principal';
 import { RoleStore } from './guard';
 
 // One document per app user in the Cosmos `users` container.
-// id is `<identityProvider>:<userId>` and the partition key is `/identityProvider`,
-// so a role lookup is a single point read.
+// id is the provider user id and the partition key is `/identityProvider`. Cosmos only requires ids to be
+// unique within a partition, so this is unique per provider and a role lookup is one point read.
 export interface UserDocument {
   id: string;
   identityProvider: string;
@@ -32,7 +32,7 @@ export class CosmosRoleStore implements RoleStore {
     }
 
     const { resource } = await this.users
-      .item(userDocumentId(identityProvider, userId), identityProvider)
+      .item(userId, identityProvider)
       .read<UserDocument>();
 
     // Anything other than a known role fails closed.

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
 import { asContainer } from './testDoubles';
-import { CosmosRoleStore, UserDocument, userDocumentId } from './roleStore';
+import { CosmosRoleStore, UserDocument } from './roleStore';
 
 // Fake of the Cosmos container surface the store uses. `docs` is keyed by item id.
 function fakeUsers(docs: Record<string, Partial<UserDocument>> = {}) {
@@ -19,7 +19,7 @@ function fakeUsers(docs: Record<string, Partial<UserDocument>> = {}) {
 describe('CosmosRoleStore', () => {
   it('returns the stored role for a known user', async () => {
     const { container } = fakeUsers({
-      'github:123': { id: 'github:123', identityProvider: 'github', userId: '123', role: 'editor' },
+      '123': { id: '123', identityProvider: 'github', userId: '123', role: 'editor' },
     });
     const store = new CosmosRoleStore(container);
     expect(await store.getRole('github', '123')).toBe('editor');
@@ -28,7 +28,7 @@ describe('CosmosRoleStore', () => {
   it('reads the item by id and partitions by identity provider', async () => {
     const { container, item } = fakeUsers();
     await new CosmosRoleStore(container).getRole('github', '123');
-    expect(item).toHaveBeenCalledWith('github:123', 'github');
+    expect(item).toHaveBeenCalledWith('123', 'github');
   });
 
   it('returns null when the user has no document', async () => {
@@ -38,7 +38,7 @@ describe('CosmosRoleStore', () => {
 
   it('returns null when the stored role is not a known app role', async () => {
     const { container } = fakeUsers({
-      'github:123': { id: 'github:123', identityProvider: 'github', userId: '123', role: 'superuser' as never },
+      '123': { id: '123', identityProvider: 'github', userId: '123', role: 'superuser' as never },
     });
     expect(await new CosmosRoleStore(container).getRole('github', '123')).toBeNull();
   });
@@ -55,9 +55,5 @@ describe('CosmosRoleStore', () => {
     const { container, item } = fakeUsers();
     expect(await new CosmosRoleStore(container).getRole('github', '')).toBeNull();
     expect(item).not.toHaveBeenCalled();
-  });
-
-  it('builds the document id as provider and user id joined by a colon', () => {
-    expect(userDocumentId('github', '123')).toBe('github:123');
   });
 });
