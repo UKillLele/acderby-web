@@ -20,6 +20,20 @@ describe('parsePersonInput', () => {
     expect(result.ok && result.value.imageUrl).toBe('');
   });
 
+  it('accepts player and photographer, removing duplicates', () => {
+    const result = parsePersonInput({ name: 'Jordan', roles: ['player', 'photographer', 'player'] });
+    expect(result.ok && result.value.roles).toEqual(['player', 'photographer']);
+  });
+
+  it('refuses an unknown or empty role list', () => {
+    expect(parsePersonInput({ name: 'Jordan', roles: ['coach'] }).ok).toBe(false);
+    expect(parsePersonInput({ name: 'Jordan', roles: [] }).ok).toBe(false);
+  });
+
+  it('leaves roles undefined when omitted', () => {
+    expect(parsePersonInput({ name: 'Jordan' })).toMatchObject({ ok: true, value: { roles: undefined } });
+  });
+
   it('refuses a portfolio link that is not https', () => {
     const result = parsePersonInput({ name: 'Jordan', portfolioUrl: 'http://example.com' });
     expect(result).toEqual({ ok: false, errors: ['portfolioUrl must be an https URL'] });

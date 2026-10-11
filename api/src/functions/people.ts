@@ -8,6 +8,12 @@ import { ApiRequest, errorResponse, isCosmosError, json, readJsonBody, stripSyst
 import { parsePersonInput, Person } from '../shared/models';
 import { CosmosRoleStore } from '../shared/roleStore';
 
+// Records saved before roles existed are players. Reads fill in the defaults so every response has the same shape.
+function toPerson(doc: Person): Person {
+  const clean = stripSystemFields(doc);
+  return { ...clean, portfolioUrl: clean.portfolioUrl ?? '', roles: clean.roles ?? ['player'] };
+}
+
 export interface PeopleDeps {
   roles: RoleStore;
   players: Container;
@@ -38,13 +44,13 @@ export function peopleHandlers(deps: () => PeopleDeps) {
           }
         : { query: 'SELECT * FROM c' };
       const { resources } = await deps().players.items.query<Person>(spec).fetchAll();
-      return json(200, resources.map(stripSystemFields));
+      return json(200, resources.map(toPerson));
     },
 
     get: async (request: ApiRequest): Promise<HttpResponseInit> => {
       const id = request.params.id ?? '';
       const { resource } = await deps().players.item(id, id).read<Person>();
-      return resource ? json(200, stripSystemFields(resource)) : errorResponse(404, 'Person not found');
+      return resource ? json(200, toPerson(resource)) : errorResponse(404, 'Person not found');
     },
 
     create: async (request: ApiRequest): Promise<HttpResponseInit> => {
@@ -59,6 +65,7 @@ export function peopleHandlers(deps: () => PeopleDeps) {
         ...parsed.value,
         imageUrl: parsed.value.imageUrl ?? '',
         portfolioUrl: parsed.value.portfolioUrl ?? '',
+        roles: parsed.value.roles ?? ['player'],
       };
       await deps().players.items.create(doc);
       return json(201, doc);
@@ -76,13 +83,14 @@ export function peopleHandlers(deps: () => PeopleDeps) {
       // An omitted imageUrl keeps the stored photo; an empty string clears it.
       const { resource } = await deps().players.item(id, id).read<Person>();
       if (!resource) return errorResponse(404, 'Person not found');
-      const existing = stripSystemFields(resource);
+      const existing = toPerson(resource);
 
       const doc: Person = {
         id,
         ...parsed.value,
         imageUrl: parsed.value.imageUrl ?? existing.imageUrl,
-        portfolioUrl: parsed.value.portfolioUrl ?? existing.portfolioUrl ?? '',
+        portfolioUrl: parsed.value.portfolioUrl ?? existing.portfolioUrl,
+        roles: parsed.value.roles ?? existing.roles,
       };
       try {
         await deps().players.item(id, id).replace(doc);
