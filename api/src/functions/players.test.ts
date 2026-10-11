@@ -125,6 +125,28 @@ describe('players write endpoints', () => {
     expect(players.docs.has('other\u0000other')).toBe(false);
   });
 
+  it('update keeps the stored photo when the body leaves imageUrl out', async () => {
+    const photo = 'https://acrdphotos.blob.core.windows.net/photos/Alex.png';
+    const { handlers, players } = setup('editor');
+    players.docs.set('p1\u0000p1', { ...alex, imageUrl: photo });
+    const withoutPhoto = { name: validBody.name, number: validBody.number, teams: validBody.teams };
+
+    const res = await handlers.update(fakeRequest({ body: withoutPhoto, headers: signedIn, params: { id: 'p1' } }));
+
+    expect(res.status).toBe(200);
+    expect(players.docs.get('p1\u0000p1')?.imageUrl).toBe(photo);
+  });
+
+  it('update clears the photo when the body sends an empty imageUrl', async () => {
+    const photo = 'https://acrdphotos.blob.core.windows.net/photos/Alex.png';
+    const { handlers, players } = setup('editor');
+    players.docs.set('p1\u0000p1', { ...alex, imageUrl: photo });
+
+    await handlers.update(fakeRequest({ body: { ...validBody, imageUrl: '' }, headers: signedIn, params: { id: 'p1' } }));
+
+    expect(players.docs.get('p1\u0000p1')?.imageUrl).toBe('');
+  });
+
   it('update returns 404 for a missing player', async () => {
     const { handlers } = setup('editor');
     const res = await handlers.update(fakeRequest({ body: validBody, headers: signedIn, params: { id: 'nope' } }));

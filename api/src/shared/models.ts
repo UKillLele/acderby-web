@@ -39,8 +39,13 @@ export interface Team {
   type: string;
 }
 
-export type PersonInput = Omit<Person, 'id'>;
-export type TeamInput = Omit<Team, 'id' | 'slug'>;
+// Image fields are optional on input. Omitted means "keep the stored value" on update; an empty string clears it.
+export type PersonInput = Omit<Person, 'id' | 'imageUrl'> & { imageUrl?: string };
+export type TeamInput = Omit<Team, 'id' | 'slug' | 'imageUrl' | 'logoUrl' | 'defaultSkaterImage'> & {
+  imageUrl?: string;
+  logoUrl?: string;
+  defaultSkaterImage?: string;
+};
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; errors: string[] };
 
@@ -71,7 +76,9 @@ function readRequiredString(body: Record<string, unknown>, field: string, max: n
 }
 
 // Images and logos are only ever served over https, so anything else is rejected.
-function readHttpsUrl(body: Record<string, unknown>, field: string, errors: string[]): string {
+// Returns undefined when the field is left out, so the caller can keep the stored value.
+function readHttpsUrl(body: Record<string, unknown>, field: string, errors: string[]): string | undefined {
+  if (body[field] === undefined || body[field] === null) return undefined;
   const value = readString(body, field, 500, errors);
   if (value && !value.startsWith('https://')) errors.push(`${field} must be an https URL`);
   return value;

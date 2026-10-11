@@ -6,8 +6,18 @@ describe('parsePersonInput', () => {
   it('accepts a player with no positions and trims the name', () => {
     expect(parsePersonInput({ name: '  Alex ' })).toEqual({
       ok: true,
-      value: { name: 'Alex', number: '', imageUrl: '', teams: [] },
+      value: { name: 'Alex', number: '', teams: [] },
     });
+  });
+
+  it('leaves imageUrl undefined when it is omitted, so an update can keep the stored value', () => {
+    const result = parsePersonInput({ name: 'Alex' });
+    expect(result.ok && result.value.imageUrl).toBeUndefined();
+  });
+
+  it('keeps an empty imageUrl as an explicit clear', () => {
+    const result = parsePersonInput({ name: 'Alex', imageUrl: '' });
+    expect(result.ok && result.value.imageUrl).toBe('');
   });
 
   it('refuses an image that is not https', () => {

@@ -58,7 +58,15 @@ export function teamsHandlers(deps: () => TeamsDeps) {
         return errorResponse(409, 'A team with this name already exists');
       }
 
-      const doc: Team = { id: randomUUID(), slug, ...parsed.value, type: parsed.value.type || 'Misc' };
+      const doc: Team = {
+        id: randomUUID(),
+        slug,
+        ...parsed.value,
+        imageUrl: parsed.value.imageUrl ?? '',
+        logoUrl: parsed.value.logoUrl ?? '',
+        defaultSkaterImage: parsed.value.defaultSkaterImage ?? '',
+        type: parsed.value.type || 'Misc',
+      };
       await deps().teams.items.create(doc);
       return json(201, doc);
     },
@@ -71,11 +79,18 @@ export function teamsHandlers(deps: () => TeamsDeps) {
       const parsed = parseTeamInput(await readJsonBody(request));
       if (!parsed.ok) return errorResponse(400, 'Invalid team', parsed.errors);
 
-      // Keep the id and slug from the stored document, and the type when the body leaves it out.
+      // Keep the id and slug from the stored document. Omitted type and image fields keep their stored values.
       const existing = await findBySlug(deps().teams, slug);
       if (!existing) return errorResponse(404, 'Team not found');
 
-      const doc: Team = { ...existing, ...parsed.value, type: parsed.value.type || existing.type };
+      const doc: Team = {
+        ...existing,
+        ...parsed.value,
+        imageUrl: parsed.value.imageUrl ?? existing.imageUrl,
+        logoUrl: parsed.value.logoUrl ?? existing.logoUrl,
+        defaultSkaterImage: parsed.value.defaultSkaterImage ?? existing.defaultSkaterImage,
+        type: parsed.value.type || existing.type,
+      };
       await deps().teams.item(existing.id, slug).replace(doc);
       return json(200, doc);
     },

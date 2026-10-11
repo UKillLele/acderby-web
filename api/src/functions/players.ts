@@ -53,7 +53,7 @@ export function playersHandlers(deps: () => PlayersDeps) {
       const parsed = parsePersonInput(await readJsonBody(request));
       if (!parsed.ok) return errorResponse(400, 'Invalid player', parsed.errors);
 
-      const doc: Person = { id: randomUUID(), ...parsed.value };
+      const doc: Person = { id: randomUUID(), ...parsed.value, imageUrl: parsed.value.imageUrl ?? '' };
       await deps().players.items.create(doc);
       return json(201, doc);
     },
@@ -67,7 +67,11 @@ export function playersHandlers(deps: () => PlayersDeps) {
       if (!parsed.ok) return errorResponse(400, 'Invalid player', parsed.errors);
 
       // The id comes from the route only. A different id in the body is ignored.
-      const doc: Person = { id, ...parsed.value };
+      // An omitted imageUrl keeps the stored photo; an empty string clears it.
+      const { resource: existing } = await deps().players.item(id, id).read<Person>();
+      if (!existing) return errorResponse(404, 'Player not found');
+
+      const doc: Person = { id, ...parsed.value, imageUrl: parsed.value.imageUrl ?? existing.imageUrl };
       try {
         await deps().players.item(id, id).replace(doc);
       } catch (err) {

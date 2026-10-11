@@ -129,6 +129,19 @@ describe('teams write endpoints', () => {
     });
   });
 
+  it('update keeps the stored logo and photo when the body leaves them out', async () => {
+    const logo = 'https://acrdphotos.blob.core.windows.net/photos/hellcats.png';
+    const { handlers, teams } = setup('editor');
+    teams.docs.set(homeKey, { ...home, logoUrl: logo });
+
+    const res = await handlers.update(
+      fakeRequest({ body: { name: 'Hellcats', color: '#ff0000' }, headers: signedIn, params: { slug: 'hellcats' } }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(teams.docs.get(homeKey)).toMatchObject({ logoUrl: logo, imageUrl: '', defaultSkaterImage: '' });
+  });
+
   it('update returns 404 for a missing team', async () => {
     const { handlers } = setup('editor');
     const res = await handlers.update(
