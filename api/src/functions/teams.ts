@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { requireRequestRole } from '../shared/auth';
 import { getContainer } from '../shared/cosmos';
 import { RoleStore } from '../shared/guard';
-import { ApiRequest, errorResponse, json, readJsonBody, WRITE_ROLES } from '../shared/http';
+import { ApiRequest, errorResponse, json, readJsonBody, stripSystemFields, WRITE_ROLES } from '../shared/http';
 import { parseTeamInput, slugify, Team } from '../shared/models';
 import { CosmosRoleStore } from '../shared/roleStore';
 
@@ -21,7 +21,7 @@ async function findBySlug(teams: Container, slug: string): Promise<Team | undefi
     parameters: [{ name: '@slug', value: slug }],
   };
   const { resources } = await teams.items.query<Team>(spec, { partitionKey: slug }).fetchAll();
-  return resources[0];
+  return resources[0] && stripSystemFields(resources[0]);
 }
 
 export function teamsHandlers(deps: () => TeamsDeps) {
@@ -34,7 +34,7 @@ export function teamsHandlers(deps: () => TeamsDeps) {
   return {
     list: async (): Promise<HttpResponseInit> => {
       const { resources } = await deps().teams.items.query<Team>({ query: 'SELECT * FROM c' }).fetchAll();
-      return json(200, resources);
+      return json(200, resources.map(stripSystemFields));
     },
 
     get: async (request: ApiRequest): Promise<HttpResponseInit> => {

@@ -49,6 +49,13 @@ function setup(role: AppRole | null = 'editor') {
 const newTeamBody = { name: 'Bay Area Bombers', description: 'Travel team', color: '#00aaff' };
 
 describe('teams read endpoints', () => {
+  it('removes Cosmos system fields from team responses', async () => {
+    const { handlers, teams } = setup();
+    teams.docs.set(homeKey, { ...home, _rid: 'r', _etag: 'e' } as Team);
+    const one = await handlers.get(fakeRequest({ params: { slug: 'hellcats' } }));
+    expect(one.jsonBody).toEqual(home);
+  });
+
   it('lists teams without checking roles', async () => {
     const { handlers, roles } = setup();
     const res = await handlers.list();

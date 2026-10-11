@@ -33,3 +33,9 @@ export async function readJsonBody(request: ApiRequest): Promise<unknown> {
 export function isCosmosError(err: unknown, code: number): boolean {
   return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === code;
 }
+
+// Cosmos adds system properties such as _rid, _self, _etag and _ts to every document.
+// They are internal, so they are removed before a document is returned or written back.
+export function stripSystemFields<T extends object>(doc: T): T {
+  return Object.fromEntries(Object.entries(doc).filter(([key]) => !key.startsWith('_'))) as T;
+}

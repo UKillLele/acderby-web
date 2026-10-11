@@ -41,6 +41,16 @@ function setup(role: AppRole | null = 'editor') {
 const validBody = { name: 'Jordan', number: '3', imageUrl: '', teams: [{ id: TEAM_ID, positionType: 2 }] };
 
 describe('players read endpoints', () => {
+  it('removes Cosmos system fields from list and get responses', async () => {
+    const { handlers, players } = setup();
+    players.docs.set('p10000p1', { ...alex, _rid: 'r', _self: 's', _etag: 'e', _ts: 1 } as Person);
+    const list = await handlers.list(fakeRequest());
+    const one = await handlers.get(fakeRequest({ params: { id: 'p1' } }));
+    expect(list.jsonBody).toEqual(expect.arrayContaining([alex]));
+    expect(one.jsonBody).toEqual(alex);
+    expect(JSON.stringify(list.jsonBody)).not.toContain('_rid');
+  });
+
   it('lists every player without checking roles', async () => {
     const { handlers, roles } = setup();
     const res = await handlers.list(fakeRequest());

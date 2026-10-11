@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { requireRequestRole } from '../shared/auth';
 import { getContainer } from '../shared/cosmos';
 import { RoleStore } from '../shared/guard';
-import { ApiRequest, errorResponse, isCosmosError, json, readJsonBody, WRITE_ROLES } from '../shared/http';
+import { ApiRequest, errorResponse, isCosmosError, json, readJsonBody, stripSystemFields, WRITE_ROLES } from '../shared/http';
 import { parsePersonInput, Person } from '../shared/models';
 import { CosmosRoleStore } from '../shared/roleStore';
 
@@ -37,13 +37,13 @@ export function playersHandlers(deps: () => PlayersDeps) {
           }
         : { query: 'SELECT * FROM c' };
       const { resources } = await deps().players.items.query<Person>(spec).fetchAll();
-      return json(200, resources);
+      return json(200, resources.map(stripSystemFields));
     },
 
     get: async (request: ApiRequest): Promise<HttpResponseInit> => {
       const id = request.params.id ?? '';
       const { resource } = await deps().players.item(id, id).read<Person>();
-      return resource ? json(200, resource) : errorResponse(404, 'Player not found');
+      return resource ? json(200, stripSystemFields(resource)) : errorResponse(404, 'Player not found');
     },
 
     create: async (request: ApiRequest): Promise<HttpResponseInit> => {
@@ -68,8 +68,9 @@ export function playersHandlers(deps: () => PlayersDeps) {
 
       // The id comes from the route only. A different id in the body is ignored.
       // An omitted imageUrl keeps the stored photo; an empty string clears it.
-      const { resource: existing } = await deps().players.item(id, id).read<Person>();
-      if (!existing) return errorResponse(404, 'Player not found');
+      const { resource } = await deps().players.item(id, id).read<Person>();
+      if (!resource) return errorResponse(404, 'Player not found');
+      const existing = stripSystemFields(resource);
 
       const doc: Person = { id, ...parsed.value, imageUrl: parsed.value.imageUrl ?? existing.imageUrl };
       try {
