@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Alert, Spinner } from 'react-bootstrap';
 import { Outlet } from 'react-router';
+import type { AppRole } from '../models/user';
 import { CurrentUser, fetchCurrentUser } from './session';
 
-// Hides admin screens from people who are not admins or editors. This is for display only.
-export function RequireEditor() {
+interface RequireRoleProps {
+  allowed: AppRole[];
+}
+
+// Hides a screen from people whose app role is not in `allowed`. This is for display only.
+// The API checks every request again.
+export function RequireRole({ allowed }: RequireRoleProps) {
   const [user, setUser] = useState<CurrentUser | null | undefined>(undefined);
 
   useEffect(() => {
@@ -27,7 +33,7 @@ export function RequireEditor() {
     );
   }
 
-  if (!user.role) {
+  if (!user.role || !allowed.includes(user.role)) {
     return <Alert variant="danger">You do not have access to this page.</Alert>;
   }
 

@@ -1,10 +1,11 @@
+import type { AppRole } from '../models/user';
+
 // Who the signed-in user is and what app role they hold, for UI only.
 // Every write is enforced on the server by requireRequestRole in the API.
-export type AppRole = 'admin' | 'editor';
-
 export interface CurrentUser {
   userDetails: string;
   identityProvider: string;
+  userId: string;
   role: AppRole | null;
 }
 
