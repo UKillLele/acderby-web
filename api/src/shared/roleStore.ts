@@ -1,3 +1,4 @@
+import type { Container } from '@azure/cosmos';
 import { AppRole } from './principal';
 import { RoleStore } from './guard';
 
@@ -12,16 +13,6 @@ export interface UserDocument {
   displayName?: string;
 }
 
-// The slice of a Cosmos container this store needs. Structural, so tests can pass a fake.
-export interface UsersContainer {
-  item(
-    id: string,
-    partitionKey: string,
-  ): {
-    read<T>(): Promise<{ resource?: T; statusCode: number }>;
-  };
-}
-
 const APP_ROLES: readonly AppRole[] = ['admin', 'editor'];
 
 // Ids are used as Cosmos item ids and path segments, so characters that would
@@ -33,7 +24,7 @@ export function userDocumentId(identityProvider: string, userId: string): string
 }
 
 export class CosmosRoleStore implements RoleStore {
-  constructor(private readonly users: UsersContainer) {}
+  constructor(private readonly users: Container) {}
 
   async getRole(identityProvider: string, userId: string): Promise<AppRole | null> {
     if (!identityProvider || !userId || UNSAFE_ID_CHARS.test(identityProvider) || UNSAFE_ID_CHARS.test(userId)) {

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
-import { CosmosRoleStore, UserDocument, UsersContainer, userDocumentId } from './roleStore';
+import { asContainer } from './testDoubles';
+import { CosmosRoleStore, UserDocument, userDocumentId } from './roleStore';
 
 // Fake of the Cosmos container surface the store uses. `docs` is keyed by item id.
 function fakeUsers(docs: Record<string, Partial<UserDocument>> = {}) {
@@ -11,7 +12,7 @@ function fakeUsers(docs: Record<string, Partial<UserDocument>> = {}) {
       return { resource: resource as T, statusCode: 200 };
     },
   }));
-  const container: UsersContainer = { item };
+  const container = asContainer({ item });
   return { container, item };
 }
 
