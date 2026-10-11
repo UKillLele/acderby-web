@@ -221,3 +221,52 @@ describe('DELETE /api/users/{identityProvider}/{userId}', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('own display name', () => {
+  it('lets the caller change their own display name but not their role', async () => {
+    const { handlers, users } = setup();
+    const params = { identityProvider: 'github', userId: CALLER_ID };
+
+    const renamed = await handlers.update(fakeRequest({ headers: adminHeaders, params, body: { role: 'admin', displayName: 'Anna B' } }));
+    expect(renamed.status).toBe(200);
+    expect(users.docs.get(`github\u0000${CALLER_ID}`)).toMatchObject({ role: 'admin', displayName: 'Anna B' });
+
+    const refused = await handlers.update(fakeRequest({ headers: adminHeaders, params, body: { role: 'editor', displayName: 'Anna B' } }));
+    expect(refused.status).toBe(400);
+  });
+});
+
+// Two admins act at the same moment. The first query (the check) sees two admins. The second query
+// (after the write) sees none, as if the other admin's change landed in between.
+describe('last admin when two admins act at once', () => {
+  function raceSetup() {
+    let queries = 0;
+    const users = new InMemoryContainer<UserDocument>(
+      (d) => d.identityProvider,
+      [doc('222', 'admin', 'Bo'), doc('333', 'admin', 'Cy')],
+      (docs, spec) => {
+        queries += 1;
+        return queries === 1 ? filterByRole(docs, spec) : [];
+      },
+    );
+    const roles: RoleStore = { getRole: vi.fn(async (): Promise<AppRole> => 'admin') };
+    const handlers = usersHandlers(() => ({ roles, users: asContainer(users) }));
+    return { handlers, users };
+  }
+
+  it('reverts a demotion that would leave no admins', async () => {
+    const { handlers, users } = raceSetup();
+    const res = await handlers.update(
+      fakeRequest({ headers: adminHeaders, params: { identityProvider: 'github', userId: '222' }, body: { role: 'editor' } }),
+    );
+    expect(res.status).toBe(409);
+    expect(users.docs.get('github\u0000222')?.role).toBe('admin');
+  });
+
+  it('restores a removal that would leave no admins', async () => {
+    const { handlers, users } = raceSetup();
+    const res = await handlers.remove(fakeRequest({ headers: adminHeaders, params: { identityProvider: 'github', userId: '222' } }));
+    expect(res.status).toBe(409);
+    expect(users.docs.get('github\u0000222')).toEqual(doc('222', 'admin', 'Bo'));
+  });
+});

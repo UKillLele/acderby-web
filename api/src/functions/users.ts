@@ -26,6 +26,11 @@ function toUser(doc: UserDocument) {
   };
 }
 
+async function findUser(users: Container, identityProvider: string, userId: string): Promise<UserDocument | undefined> {
+  const { resource } = await users.item(userId, identityProvider).read<UserDocument>();
+  return resource;
+}
+
 async function countAdmins(users: Container): Promise<number> {
   const spec: SqlQuerySpec = {
     query: 'SELECT c.id FROM c WHERE c.role = @role',
@@ -87,27 +92,35 @@ export function usersHandlers(deps: () => UsersDeps) {
       const pathErrors = checkUserPath(identityProvider, userId);
       if (pathErrors.length) return errorResponse(400, 'Invalid user', pathErrors);
 
-      // Changing your own role could lock you out, so it is refused. Another admin has to do it.
-      if (gate.caller.identityProvider === identityProvider && gate.caller.userId === userId) {
-        return errorResponse(400, 'You cannot change your own role');
-      }
-
       const parsed = parseRoleUpdate(await readJsonBody(request));
       if (!parsed.ok) return errorResponse(400, 'Invalid user', parsed.errors);
 
-      const { resource } = await deps().users.item(userId, identityProvider).read<UserDocument>();
-      if (!resource) return errorResponse(404, 'User not found');
+      const isSelf = gate.caller.identityProvider === identityProvider && gate.caller.userId === userId;
+      const existing = await findUser(deps().users, identityProvider, userId);
+      if (!existing) return errorResponse(404, 'User not found');
 
-      if (resource.role === 'admin' && parsed.value.role !== 'admin' && (await countAdmins(deps().users)) <= 1) {
+      // Changing your own role could lock you out, so it is refused. Your own display name is harmless to change.
+      if (isSelf && parsed.value.role !== existing.role) {
+        return errorResponse(400, 'You cannot change your own role');
+      }
+
+      const demotesAdmin = existing.role === 'admin' && parsed.value.role !== 'admin';
+      if (demotesAdmin && (await countAdmins(deps().users)) <= 1) {
         return errorResponse(409, 'At least one admin must remain');
       }
 
       const doc: UserDocument = {
-        ...stripSystemFields(resource),
+        ...stripSystemFields(existing),
         role: parsed.value.role,
         displayName: parsed.value.displayName,
       };
       await deps().users.item(userId, identityProvider).replace(doc);
+
+      // Another admin may have changed their own role at the same moment. If that left no admins, put this one back.
+      if (demotesAdmin && (await countAdmins(deps().users)) === 0) {
+        await deps().users.item(userId, identityProvider).replace(stripSystemFields(existing));
+        return errorResponse(409, 'At least one admin must remain');
+      }
       return json(200, toUser(doc));
     },
 
@@ -124,10 +137,10 @@ export function usersHandlers(deps: () => UsersDeps) {
         return errorResponse(400, 'You cannot remove your own access');
       }
 
-      const { resource } = await deps().users.item(userId, identityProvider).read<UserDocument>();
-      if (!resource) return errorResponse(404, 'User not found');
+      const existing = await findUser(deps().users, identityProvider, userId);
+      if (!existing) return errorResponse(404, 'User not found');
 
-      if (resource.role === 'admin' && (await countAdmins(deps().users)) <= 1) {
+      if (existing.role === 'admin' && (await countAdmins(deps().users)) <= 1) {
         return errorResponse(409, 'At least one admin must remain');
       }
 
@@ -136,6 +149,16 @@ export function usersHandlers(deps: () => UsersDeps) {
       } catch (err) {
         if (isCosmosError(err, 404)) return errorResponse(404, 'User not found');
         throw err;
+      }
+
+      // Another admin may have been removed or demoted at the same moment. If that left no admins, restore this one.
+      if (existing.role === 'admin' && (await countAdmins(deps().users)) === 0) {
+        try {
+          await deps().users.items.create(stripSystemFields(existing));
+        } catch (err) {
+          if (!isCosmosError(err, 409)) throw err;
+        }
+        return errorResponse(409, 'At least one admin must remain');
       }
       return json(204);
     },

@@ -95,4 +95,29 @@ describe('UsersAdminPage', () => {
 
     expect(await screen.findByText('At least one admin must remain')).toBeTruthy();
   });
+
+  it('edits a display name and keeps the current role', async () => {
+    vi.mocked(usersApi.update).mockResolvedValue({ ...ed, displayName: 'Edward' });
+    renderPage();
+    await screen.findByText('Ed');
+
+    fireEvent.click(screen.getByLabelText('Edit name for 111'));
+    fireEvent.change(screen.getByLabelText('Display name for 111'), { target: { value: 'Edward' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(usersApi.update).toHaveBeenCalledWith('github', '111', { role: 'editor', displayName: 'Edward' }));
+    expect(await screen.findByText('Edward')).toBeTruthy();
+  });
+
+  it('lets the signed-in admin edit their own display name', async () => {
+    vi.mocked(usersApi.update).mockResolvedValue({ ...anna, displayName: 'Anna B' });
+    renderPage();
+    await screen.findByText('Ed');
+
+    fireEvent.click(screen.getByLabelText(`Edit name for ${anna.userId}`));
+    fireEvent.change(screen.getByLabelText(`Display name for ${anna.userId}`), { target: { value: 'Anna B' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(usersApi.update).toHaveBeenCalledWith('github', anna.userId, { role: 'admin', displayName: 'Anna B' }));
+  });
 });

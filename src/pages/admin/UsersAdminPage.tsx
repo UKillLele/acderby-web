@@ -7,6 +7,8 @@ import { messageFor } from './PeopleAdminPage';
 
 const PROVIDER = 'github';
 
+const keyOf = (user: AppUser) => `${user.identityProvider}:${user.userId}`;
+
 export function UsersAdminPage() {
   const [users, setUsers] = useState<AppUser[] | null>(null);
   const [me, setMe] = useState<CurrentUser | null>(null);
@@ -15,6 +17,8 @@ export function UsersAdminPage() {
   const [newUserId, setNewUserId] = useState('');
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState<AppRole>('editor');
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [draftName, setDraftName] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -67,6 +71,26 @@ export function UsersAdminPage() {
     setError(null);
     try {
       replace(await usersApi.update(user.identityProvider, user.userId, { role, displayName: user.displayName }));
+    } catch (err) {
+      setError(messageFor(err));
+    }
+  }
+
+  function startEditing(user: AppUser) {
+    setError(null);
+    setEditingKey(keyOf(user));
+    setDraftName(user.displayName);
+  }
+
+  async function saveName(user: AppUser) {
+    setError(null);
+    try {
+      const updated = await usersApi.update(user.identityProvider, user.userId, {
+        role: user.role,
+        displayName: draftName.trim(),
+      });
+      replace(updated);
+      setEditingKey(null);
     } catch (err) {
       setError(messageFor(err));
     }
@@ -149,13 +173,49 @@ export function UsersAdminPage() {
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={`${user.identityProvider}:${user.userId}`}>
+              <tr key={keyOf(user)}>
                 <td>
-                  {user.displayName || <span className="text-muted">No name</span>}
-                  {isSelf(user) && (
-                    <Badge bg="dark" className="ms-2">
-                      you
-                    </Badge>
+                  {editingKey === keyOf(user) ? (
+                    <Form
+                      className="d-flex gap-2"
+                      onSubmit={(event: FormEvent) => {
+                        event.preventDefault();
+                        void saveName(user);
+                      }}
+                    >
+                      <Form.Control
+                        size="sm"
+                        aria-label={`Display name for ${user.userId}`}
+                        value={draftName}
+                        onChange={(e) => setDraftName(e.target.value)}
+                        maxLength={100}
+                        autoFocus
+                      />
+                      <Button type="submit" size="sm" variant="primary">
+                        Save
+                      </Button>
+                      <Button size="sm" variant="outline-secondary" onClick={() => setEditingKey(null)}>
+                        Cancel
+                      </Button>
+                    </Form>
+                  ) : (
+                    <>
+                      {user.displayName || <span className="text-muted">No name</span>}
+                      {isSelf(user) && (
+                        <Badge bg="dark" className="ms-2">
+                          you
+                        </Badge>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="link"
+                        className="ms-2 p-0"
+                        aria-label={`Edit name for ${user.userId}`}
+                        onClick={() => startEditing(user)}
+                      >
+                        Edit name
+                      </Button>
+                    </>
                   )}
                 </td>
                 <td>{user.userId}</td>
