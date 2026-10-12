@@ -20,6 +20,16 @@ holds photos.
 - Hooks in `.claude/` enforce these rules; they are changed by a person, not by the agent.
 - Commit small, reviewable steps on a feature branch. Do not push to `main`.
 
+## Claude Code guardrails
+- **Plan before work:** Before starting work on a new feature branch (after the previous branch is merged),
+  create and get approval for a plan via `/plan`. Plans are stored per-branch in `.claude/plans/{branch-name}.md`.
+  When headless, a plan must exist but approval is automatic.
+- **Context after new branch:** After creating a new feature branch, suggest clearing context with `/clear`
+  to start fresh for that branch's work.
+- **Code review before PR:** A `/code-review` must be run within 15 minutes before creating a PR with `gh pr create`.
+- **Commit before destructive operations:** Uncommitted changes block `rm -rf`, `git reset --hard`, and `git clean -f`;
+  commit first.
+
 ## Stack and conventions
 - React 19, React Router 7 (`createBrowserRouter`, import from `react-router`), react-bootstrap for UI.
 - TypeScript strict; no unused locals or parameters (prefix unused parameters with `_`).
