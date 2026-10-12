@@ -9,5 +9,6 @@ local.settings.json
 !.env.example
 .claude/audit.jsonl
 .claude/settings.local.json
+.claude/plans/
 *.pem
 *.key
