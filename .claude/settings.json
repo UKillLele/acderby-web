@@ -1,14 +1,10 @@
 {
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [{ "type": "command", "command": "node .claude/hooks/guard-plan-exists.mjs" }]
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
         "hooks": [
+          { "type": "command", "command": "node .claude/hooks/guard-plan-exists.mjs" },
           { "type": "command", "command": "node .claude/hooks/guard-bash.mjs" },
           { "type": "command", "command": "node .claude/hooks/guard-pr-review.mjs" }
         ]
