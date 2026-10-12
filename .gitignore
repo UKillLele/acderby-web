@@ -10,5 +10,6 @@ local.settings.json
 .claude/audit.jsonl
 .claude/settings.local.json
 .claude/plans/
+.vscode/
 *.pem
 *.key
