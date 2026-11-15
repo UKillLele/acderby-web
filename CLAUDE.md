@@ -28,8 +28,9 @@ holds photos.
 ## Claude Code guardrails
 
 - **Plan before work:** Before starting work on a new feature branch (after the previous branch is merged),
-  create and get approval for a plan via `/plan`. Plans are stored per-branch in `.claude/plans/{branch-name}.md`.
-  When headless, a plan must exist but approval is automatic.
+  a plan must exist and be approved. Plans are stored per-branch in `.claude/plans/{branch-name}.md`. Approval can
+  be given through `/plan` or in chat. An approved plan's status line reads `**Status:** Approved`, with the branch
+  name. When headless, a plan must exist but approval is automatic.
 - **Context after new branch:** After creating a new feature branch, suggest clearing context with `/clear`
   to start fresh for that branch's work.
 - **Code review before PR:** A `/code-review` must be run within 15 minutes before creating a PR with `gh pr create`.
